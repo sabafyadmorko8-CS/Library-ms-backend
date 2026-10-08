@@ -13,22 +13,47 @@ class CorsMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
+        $allowedOrigins = [
+            'http://localhost:3000',
+            'http://127.0.0.1:3000',
+        ];
+
+        $origin = $request->headers->get('Origin');
+
         // Handle preflight OPTIONS request
-        if ($request->getMethod() === "OPTIONS") {
-            return response('', 200)
-                ->header('Access-Control-Allow-Origin', 'http://localhost:3000')
-                ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-                ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
-                ->header('Access-Control-Allow-Credentials', 'true');
+        if ($request->getMethod() === 'OPTIONS') {
+            $response = response('', 204);
+        } else {
+            $response = $next($request);
         }
 
-        $response = $next($request);
+        if ($origin && in_array($origin, $allowedOrigins, true)) {
+            $response->headers->set(
+                'Access-Control-Allow-Origin',
+                $origin
+            );
 
-        // Add CORS headers to the response
-        return $response
-            ->header('Access-Control-Allow-Origin', 'http://localhost:3000')
-            ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
-            ->header('Access-Control-Allow-Credentials', 'true');
+            $response->headers->set(
+                'Access-Control-Allow-Credentials',
+                'true'
+            );
+        }
+
+        $response->headers->set(
+            'Access-Control-Allow-Methods',
+            'GET, POST, PUT, DELETE, OPTIONS'
+        );
+
+        $response->headers->set(
+            'Access-Control-Allow-Headers',
+            'Content-Type, Authorization, X-Requested-With, Accept'
+        );
+
+        $response->headers->set(
+            'Vary',
+            'Origin'
+        );
+
+        return $response;
     }
 }
