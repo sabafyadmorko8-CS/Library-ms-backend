@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Fix Everything - Database & Books</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 1000px; margin: 20px auto; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        button { padding: 10px 15px; margin: 5px; background: #007cba; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #005a87; }
+        .result { margin: 10px 0; padding: 10px; border-radius: 3px; white-space: pre-wrap; font-family: monospace; max-height: 300px; overflow-y: auto; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        .big-button { padding: 15px 25px; font-size: 16px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Fix Everything - Complete System Repair</h1>
+    
+    <div class="test-section">
+        <h3>🚀 Quick Fix (Do This First)</h3>
+        <button onclick="fixEverything()" class="big-button">🔧 FIX ALL ISSUES</button>
+        <div id="fix-all-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Step 1: Fix Database</h3>
+        <button onclick="fixDatabase()">Run Migrations</button>
+        <button onclick="checkDatabase()">Check Database Status</button>
+        <div id="db-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Step 2: Create Demo Data</h3>
+        <button onclick="createDemoUsers()">Create Demo Users</button>
+        <button onclick="createDemoBooks()">Create Demo Books</button>
+        <div id="demo-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Step 3: Test Book Creation</h3>
+        <button onclick="testBookCreation()">Test Create Book</button>
+        <button onclick="debugBookCreation()">Debug Book Creation</button>
+        <div id="book-test-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Step 4: Test Login</h3>
+        <button onclick="testLogin()">Test Sabaf Login</button>
+        <button onclick="createAdmin()">Force Create Sabaf</button>
+        <div id="login-test-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Step 5: Final Verification</h3>
+        <button onclick="verifyEverything()">Verify All Systems</button>
+        <div id="verify-result" class="result"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://127.0.0.1:8000/api';
+
+        function showResult(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.className = `result ${type}`;
+            element.textContent = message;
+        }
+
+        async function makeRequest(endpoint, options = {}) {
+            try {
+                const response = await fetch(`${API_BASE}${endpoint}`, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        ...options.headers
+                    },
+                    ...options
+                });
+                
+                const data = await response.json();
+                return { success: response.ok, data, status: response.status };
+            } catch (error) {
+                return { success: false, error: error.message };
+            }
+        }
+
+        async function fixEverything() {
+            showResult('fix-all-result', '🔧 Starting complete system repair...', 'info');
+            
+            let results = '🔧 COMPLETE SYSTEM REPAIR\n\n';
+            
+            // Step 1: Fix Database
+            results += '1. Fixing Database...\n';
+            const dbResult = await makeRequest('/fix-database');
+            if (dbResult.success) {
+                results += '   ✅ Database migrations completed\n';
+            } else {
+                results += '   ❌ Database migration failed\n';
+            }
+            
+            // Step 2: Create Admin
+            results += '2. Creating Sabaf User...\n';
+            const adminResult = await makeRequest('/force-create-admin');
+            if (adminResult.success) {
+                results += '   ✅ Sabaf user created\n';
+            } else {
+                results += '   ❌ Sabaf creation failed\n';
+            }
+            
+            // Step 3: Create Demo Users
+            results += '3. Creating Demo Users...\n';
+            const usersResult = await makeRequest('/create-demo-users');
+            if (usersResult.success) {
+                results += '   ✅ Demo users created\n';
+            } else {
+                results += '   ❌ Demo users creation failed\n';
+            }
+            
+            // Step 4: Create Demo Books
+            results += '4. Creating Demo Books...\n';
+            const booksResult = await makeRequest('/create-demo-books');
+            if (booksResult.success) {
+                results += '   ✅ Demo books created\n';
+            } else {
+                results += '   ❌ Demo books creation failed\n';
+            }
+            
+            // Step 5: Test Book Creation
+            results += '5. Testing Book Creation...\n';
+            const testBookResult = await makeRequest('/books', {
+                method: 'POST',
+                body: JSON.stringify({
+                    title: 'Test Book After Fix',
+                    author: 'Test Author',
+                    isbn: '978-0-000-99999-9',
+                    year: 2024,
+                    quantity: 1
+                })
+            });
+            if (testBookResult.success) {
+                results += '   ✅ Book creation test passed\n';
+            } else {
+                results += '   ❌ Book creation test failed\n';
+            }
+            
+            // Step 6: Test Login
+            results += '6. Testing Login...\n';
+            const loginResult = await makeRequest('/simple-login', {
+                method: 'POST',
+                body: JSON.stringify({
+                    email: 'sabaf@admin.com',
+                    password: 'password'
+                })
+            });
+            if (loginResult.success) {
+                results += '   ✅ Login test passed\n';
+            } else {
+                results += '   ❌ Login test failed\n';
+            }
+            
+            results += '\n🎉 REPAIR COMPLETE!\n\n';
+            results += 'You can now use your React app at http://localhost:3000';
+            
+            showResult('fix-all-result', results, 'success');
+        }
+
+        async function fixDatabase() {
+            const result = await makeRequest('/fix-database');
+            if (result.success) {
+                showResult('db-result', `✅ Database Fixed!\n${JSON.stringify(result.data, null, 2)}`, 'success');
+            } else {
+                showResult('db-result', `❌ Database Fix Failed: ${result.error || JSON.stringify(result.data)}`, 'error');
+            }
+        }
+
+        async function checkDatabase() {
+            const result = await makeRequest('/test-books-table');
+            if (result.success) {
+                showResult('db-result', `✅ Database Status:\n${JSON.stringify(result.data, null, 2)}`, 'success');
+            } else {
+                showResult('db-result', `❌ Database Check Failed: ${result.error || JSON.stringify(result.data)}`, 'error');
+            }
+        }
+
+        async function createDemoUsers() {
+            const result = await makeRequest('/create-demo-users');
+            if (result.success) {
+                showResult('demo-result', `✅ Demo Users Created!\n${JSON.stringify(result.data, null, 2)}`, 'success');
+            } else {
+                showResult('demo-result', `❌ Demo Users Failed: ${result.error || JSON.stringify(result.data)}`, 'error');
+            }
+        }
+
+        async function createDemoBooks() {
+            const result = await makeRequest('/create-demo-books');
+            if (result.success) {
+                showResult('demo-result', `✅ Demo Books Created!\n${JSON.stringify(result.data, null, 2)}`, 'success');
+            } else {
+                showResult('demo-result', `❌ Demo Books Failed: ${result.error || JSON.stringify(result.data)}`, 'error');
+            }
+        }
+
+        async function testBookCreation() {
+            const bookData = {
+                title: 'Test Book Creation',
+                author: 'Test Author',
+                isbn: '978-0-000-12345-6',
+                year: 2024,
+                quantity: 3
+            };
+
+            const result = await makeRequest('/books', {
+                method: 'POST',
+                body: JSON.stringify(bookData)
+            });
+
+            if (result.success) {
+                showResult('book-test-result', `✅ Book Creation Success!\n${JSON.stringify(result.data, null, 2)}`, 'success');
+            } else {
+                showResult('book-test-result', `❌ Book Creation Failed: ${result.error || JSON.stringify(result.data)}`, 'error');
+            }
+        }
+
+        async function debugBookCreation() {
+            const bookData = {
+                title: 'Debug Test Book',
+                author: 'Debug Author',
+                isbn: '978-0-000-54321-0',
+                quantity: 2
+            };
+
+            const result = await makeRequest('/debug-books', {
+                method: 'POST',
+                body: JSON.stringify(bookData)
+            });
+
+            showResult('book-test-result', `Debug Book Creation:\n${JSON.stringify(result.data, null, 2)}`, result.success ? 'success' : 'error');
+        }
+
+        async function testLogin() {
+            const result = await makeRequest('/simple-login', {
+                method: 'POST',
+                body: JSON.stringify({
+                    email: 'sabaf@admin.com',
+                    password: 'password'
+                })
+            });
+
+            if (result.success) {
+                showResult('login-test-result', `✅ Login Success!\n${JSON.stringify(result.data, null, 2)}`, 'success');
+            } else {
+                showResult('login-test-result', `❌ Login Failed: ${result.error || JSON.stringify(result.data)}`, 'error');
+            }
+        }
+
+        async function createAdmin() {
+            const result = await makeRequest('/force-create-admin');
+            if (result.success) {
+                showResult('login-test-result', `✅ Admin Created!\n${JSON.stringify(result.data, null, 2)}`, 'success');
+            } else {
+                showResult('login-test-result', `❌ Admin Creation Failed: ${result.error || JSON.stringify(result.data)}`, 'error');
+            }
+        }
+
+        async function verifyEverything() {
+            let results = 'SYSTEM VERIFICATION:\n\n';
+            
+            // Check API
+            const apiResult = await makeRequest('/test');
+            results += `API Connection: ${apiResult.success ? '✅ Working' : '❌ Failed'}\n`;
+            
+            // Check Database
+            const dbResult = await makeRequest('/test-books-table');
+            results += `Database: ${dbResult.success ? '✅ Working' : '❌ Failed'}\n`;
+            
+            // Check Users
+            const usersResult = await makeRequest('/debug-users');
+            results += `Users: ${usersResult.success ? '✅ Working' : '❌ Failed'}\n`;
+            
+            // Check Books
+            const booksResult = await makeRequest('/books');
+            results += `Books: ${booksResult.success ? '✅ Working' : '❌ Failed'}\n`;
+            
+            // Check Login
+            const loginResult = await makeRequest('/simple-login', {
+                method: 'POST',
+                body: JSON.stringify({ email: 'sabaf@admin.com', password: 'password' })
+            });
+            results += `Login: ${loginResult.success ? '✅ Working' : '❌ Failed'}\n`;
+            
+            results += '\n' + (apiResult.success && dbResult.success && usersResult.success && booksResult.success && loginResult.success 
+                ? '🎉 ALL SYSTEMS WORKING!' 
+                : '⚠️ Some systems need attention');
+            
+            showResult('verify-result', results, 'info');
+        }
+
+        // Auto-run basic check on page load
+        window.onload = function() {
+            showResult('fix-all-result', 'Click "FIX ALL ISSUES" to automatically repair everything!', 'warning');
+        };
+    </script>
+</body>
+</html>

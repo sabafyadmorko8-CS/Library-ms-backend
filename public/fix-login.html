@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Fix Login Issue</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 20px auto; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        button { padding: 10px 15px; margin: 5px; background: #007cba; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #005a87; }
+        .result { margin: 10px 0; padding: 10px; border-radius: 3px; white-space: pre-wrap; font-family: monospace; max-height: 300px; overflow-y: auto; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .credentials { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; padding: 15px; margin: 10px 0; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>🔐 Fix Login Issue</h1>
+    
+    <div class="test-section">
+        <h3>Step 1: Check Current Users</h3>
+        <button onclick="checkUsers()">Check Existing Users</button>
+        <div id="users-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Step 2: Create/Fix Demo Users</h3>
+        <button onclick="createUsers()">Create Demo Users</button>
+        <div id="create-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Step 3: Test Login</h3>
+        <button onclick="testLogin('sabaf@admin.com', 'password')">Test Sabaf Login</button>
+        <button onclick="testLogin('librarian@library.com', 'password')">Test Librarian Login</button>
+        <button onclick="testLogin('user@library.com', 'password')">Test User Login</button>
+        <div id="login-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Step 4: Test All Accounts</h3>
+        <button onclick="testAllAccounts()">Test All Demo Accounts</button>
+        <div id="all-result" class="result"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://127.0.0.1:8000/api';
+
+        function showResult(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.className = `result ${type}`;
+            element.textContent = message;
+        }
+
+        async function makeRequest(endpoint, options = {}) {
+            try {
+                const response = await fetch(`${API_BASE}${endpoint}`, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        ...options.headers
+                    },
+                    ...options
+                });
+                
+                const data = await response.json();
+                return { success: response.ok, data, status: response.status };
+            } catch (error) {
+                return { success: false, error: error.message };
+            }
+        }
+
+        async function checkUsers() {
+            const result = await makeRequest('/debug-users');
+            if (result.success) {
+                showResult('users-result', `✅ Current Users:\n${JSON.stringify(result.data, null, 2)}`, 'success');
+            } else {
+                showResult('users-result', `❌ Failed to check users: ${result.error || JSON.stringify(result.data)}`, 'error');
+            }
+        }
+
+        async function createUsers() {
+            const result = await makeRequest('/create-demo-users');
+            if (result.success) {
+                showResult('create-result', `✅ Demo Users Created!\n${JSON.stringify(result.data, null, 2)}`, 'success');
+            } else {
+                showResult('create-result', `❌ Failed to create users: ${result.error || JSON.stringify(result.data)}`, 'error');
+            }
+        }
+
+        async function testLogin(email, password) {
+            const result = await makeRequest('/simple-login', {
+                method: 'POST',
+                body: JSON.stringify({ email, password })
+            });
+
+            if (result.success) {
+                showResult('login-result', `✅ Login Success for ${email}!\n${JSON.stringify(result.data, null, 2)}`, 'success');
+            } else {
+                showResult('login-result', `❌ Login Failed for ${email}: ${result.error || JSON.stringify(result.data)}`, 'error');
+            }
+        }
+
+        async function testAllAccounts() {
+            const accounts = [
+                { email: 'sabaf@admin.com', password: 'password', role: 'admin' },
+                { email: 'admin@library.com', password: 'password', role: 'admin' },
+                { email: 'librarian@library.com', password: 'password', role: 'librarian' },
+                { email: 'user@library.com', password: 'password', role: 'user' },
+                { email: 'alice@student.com', password: 'password', role: 'user' }
+            ];
+
+            let results = 'Testing all demo accounts:\n\n';
+            
+            for (const account of accounts) {
+                try {
+                    const result = await makeRequest('/simple-login', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            email: account.email,
+                            password: account.password
+                        })
+                    });
+                    
+                    if (result.success) {
+                        results += `✅ ${account.email} (${account.role}) - LOGIN SUCCESS\n`;
+                    } else {
+                        results += `❌ ${account.email} (${account.role}) - LOGIN FAILED: ${result.data.error || 'Unknown error'}\n`;
+                    }
+                } catch (error) {
+                    results += `❌ ${account.email} (${account.role}) - ERROR: ${error.message}\n`;
+                }
+            }
+            
+            showResult('all-result', results, 'info');
+        }
+
+        // Auto-run on page load
+        window.onload = function() {
+            checkUsers();
+        };
+    </script>
+</body>
+</html>

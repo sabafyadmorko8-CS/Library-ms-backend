@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test User Approval System</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
+        .section { margin-bottom: 30px; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+        button { background: #007bff; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; margin: 5px; }
+        button.approve { background: #28a745; }
+        button.reject { background: #dc3545; }
+        button:hover { opacity: 0.8; }
+        .result { margin-top: 15px; padding: 15px; border-radius: 4px; }
+        .success { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .error { background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+        .info { background: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 4px; overflow-x: auto; font-size: 12px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { padding: 8px; border: 1px solid #ddd; text-align: left; }
+        th { background: #f8f9fa; }
+        .status-pending { color: #ffc107; font-weight: bold; }
+        .status-approved { color: #28a745; font-weight: bold; }
+        .status-rejected { color: #dc3545; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>🔐 Test User Approval System</h1>
+    
+    <div class="section">
+        <h2>📋 Pending Users</h2>
+        <button onclick="loadPendingUsers()">Load Pending Users</button>
+        <div id="pendingUsers"></div>
+    </div>
+    
+    <div class="section">
+        <h2>👥 All Users</h2>
+        <button onclick="loadAllUsers()">Load All Users</button>
+        <div id="allUsers"></div>
+    </div>
+    
+    <div class="section">
+        <h2>🧪 Manual Test</h2>
+        <p>Test approve/reject with a specific user ID:</p>
+        <input type="number" id="testUserId" placeholder="User ID" value="1">
+        <button class="approve" onclick="testApprove()">Test Approve</button>
+        <button class="reject" onclick="testReject()">Test Reject</button>
+        <div id="manualResult"></div>
+    </div>
+    
+    <div class="section">
+        <h2>🔍 Debug Info</h2>
+        <button onclick="checkEndpoints()">Check API Endpoints</button>
+        <button onclick="checkDatabase()">Check Database Schema</button>
+        <div id="debugInfo"></div>
+    </div>
+    
+    <script>
+        async function loadPendingUsers() {
+            const resultDiv = document.getElementById('pendingUsers');
+            resultDiv.innerHTML = '<div class="info">Loading pending users...</div>';
+            
+            try {
+                const response = await fetch('/api/pending-users');
+                const result = await response.json();
+                
+                if (response.ok) {
+                    const users = result.pending_users || [];
+                    
+                    if (users.length === 0) {
+                        resultDiv.innerHTML = '<div class="info">No pending users found.</div>';
+                        return;
+                    }
+                    
+                    let html = `
+                        <div class="success">
+                            <h4>Found ${users.length} pending user(s)</h4>
+                            <table>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Role</th>
+                                    <th>Status</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                    `;
+                    
+                    users.forEach(user => {
+                        html += `
+                            <tr>
+                                <td>${user.id}</td>
+                                <td>${user.name}</td>
+                                <td>${user.email}</td>
+                                <td>${user.role}</td>
+                                <td><span class="status-${user.status || 'pending'}">${user.status || 'pending'}</span></td>
+                                <td>${new Date(user.created_at).toLocaleDateString()}</td>
+                                <td>
+                                    <button class="approve" onclick="approveUser(${user.id})">Approve</button>
+                                    <button class="reject" onclick="rejectUser(${user.id})">Reject</button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    
+                    html += '</table></div>';
+                    resultDiv.innerHTML = html;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            <h4>Failed to load pending users</h4>
+                            <p>${result.message || result.error}</p>
+                            <pre>${JSON.stringify(result, null, 2)}</pre>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h4>Network Error</h4>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        async function loadAllUsers() {
+            const resultDiv = document.getElementById('allUsers');
+            resultDiv.innerHTML = '<div class="info">Loading all users...</div>';
+            
+            try {
+                const response = await fetch('/api/debug-users');
+                const result = await response.json();
+                
+                if (response.ok) {
+                    const users = result.users || [];
+                    
+                    let html = `
+                        <div class="success">
+                            <h4>Found ${users.length} total user(s)</h4>
+                            <table>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Role</th>
+                                    <th>Status</th>
+                                    <th>Created</th>
+                                </tr>
+                    `;
+                    
+                    users.forEach(user => {
+                        html += `
+                            <tr>
+                                <td>${user.id}</td>
+                                <td>${user.name}</td>
+                                <td>${user.email}</td>
+                                <td>${user.role}</td>
+                                <td><span class="status-${user.status || 'approved'}">${user.status || 'approved'}</span></td>
+                                <td>${new Date(user.created_at).toLocaleDateString()}</td>
+                            </tr>
+                        `;
+                    });
+                    
+                    html += '</table></div>';
+                    resultDiv.innerHTML = html;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            <h4>Failed to load users</h4>
+                            <p>${result.message || result.error}</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h4>Network Error</h4>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        async function approveUser(userId) {
+            await performAction('approve', userId);
+        }
+        
+        async function rejectUser(userId) {
+            await performAction('reject', userId);
+        }
+        
+        async function testApprove() {
+            const userId = document.getElementById('testUserId').value;
+            await performAction('approve', userId, 'manualResult');
+        }
+        
+        async function testReject() {
+            const userId = document.getElementById('testUserId').value;
+            await performAction('reject', userId, 'manualResult');
+        }
+        
+        async function performAction(action, userId, targetDiv = 'pendingUsers') {
+            const resultDiv = document.getElementById(targetDiv);
+            const actionText = action === 'approve' ? 'Approving' : 'Rejecting';
+            
+            // Show loading message
+            if (targetDiv === 'manualResult') {
+                resultDiv.innerHTML = `<div class="info">${actionText} user ${userId}...</div>`;
+            }
+            
+            try {
+                const response = await fetch(`/api/${action}-user/${userId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    const message = `
+                        <div class="success">
+                            <h4>✅ User ${action}d successfully!</h4>
+                            <p><strong>Message:</strong> ${result.message}</p>
+                            <p><strong>User:</strong> ${result.user.name} (${result.user.email})</p>
+                            <p><strong>New Status:</strong> ${result.user.status}</p>
+                        </div>
+                    `;
+                    
+                    if (targetDiv === 'manualResult') {
+                        resultDiv.innerHTML = message;
+                    } else {
+                        // Reload pending users
+                        loadPendingUsers();
+                    }
+                } else {
+                    const errorMessage = `
+                        <div class="error">
+                            <h4>❌ Failed to ${action} user</h4>
+                            <p><strong>Status:</strong> ${response.status}</p>
+                            <p><strong>Error:</strong> ${result.message || result.error}</p>
+                            <details>
+                                <summary>Full Response</summary>
+                                <pre>${JSON.stringify(result, null, 2)}</pre>
+                            </details>
+                        </div>
+                    `;
+                    
+                    if (targetDiv === 'manualResult') {
+                        resultDiv.innerHTML = errorMessage;
+                    } else {
+                        resultDiv.innerHTML = errorMessage;
+                    }
+                }
+            } catch (error) {
+                const networkError = `
+                    <div class="error">
+                        <h4>❌ Network Error</h4>
+                        <p>${error.message}</p>
+                        <p>Check if Laravel server is running and the API endpoints exist.</p>
+                    </div>
+                `;
+                
+                if (targetDiv === 'manualResult') {
+                    resultDiv.innerHTML = networkError;
+                } else {
+                    resultDiv.innerHTML = networkError;
+                }
+            }
+        }
+        
+        async function checkEndpoints() {
+            const resultDiv = document.getElementById('debugInfo');
+            resultDiv.innerHTML = '<div class="info">Checking API endpoints...</div>';
+            
+            const endpoints = [
+                '/api/pending-users',
+                '/api/approve-user/1',
+                '/api/reject-user/1'
+            ];
+            
+            let html = '<div class="info"><h4>API Endpoint Status:</h4><ul>';
+            
+            for (const endpoint of endpoints) {
+                try {
+                    const response = await fetch(endpoint, {
+                        method: endpoint.includes('approve') || endpoint.includes('reject') ? 'POST' : 'GET',
+                        headers: { 'Accept': 'application/json' }
+                    });
+                    
+                    html += `<li><strong>${endpoint}:</strong> ${response.status} ${response.statusText}</li>`;
+                } catch (error) {
+                    html += `<li><strong>${endpoint}:</strong> ❌ ${error.message}</li>`;
+                }
+            }
+            
+            html += '</ul></div>';
+            resultDiv.innerHTML = html;
+        }
+        
+        async function checkDatabase() {
+            const resultDiv = document.getElementById('debugInfo');
+            resultDiv.innerHTML = '<div class="info">Checking database schema...</div>';
+            
+            try {
+                const response = await fetch('/api/debug-users');
+                const result = await response.json();
+                
+                // Check if we have users and what columns they have
+                const sampleUser = result.users && result.users[0];
+                const hasStatusColumn = sampleUser && 'status' in sampleUser;
+                
+                resultDiv.innerHTML = `
+                    <div class="${hasStatusColumn ? 'success' : 'error'}">
+                        <h4>Database Schema Check</h4>
+                        <p><strong>Total Users:</strong> ${result.total_users || 0}</p>
+                        <p><strong>Has Status Column:</strong> ${hasStatusColumn ? '✅ Yes' : '❌ No'}</p>
+                        ${!hasStatusColumn ? '<p><strong>Action Needed:</strong> Run "php artisan migrate" to add status column</p>' : ''}
+                        <details>
+                            <summary>Sample User Data</summary>
+                            <pre>${JSON.stringify(sampleUser, null, 2)}</pre>
+                        </details>
+                    </div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h4>Database Check Failed</h4>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        // Load pending users on page load
+        window.onload = function() {
+            loadPendingUsers();
+        };
+    </script>
+</body>
+</html>

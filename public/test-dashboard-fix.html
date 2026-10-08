@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Dashboard Fix</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 20px auto; padding: 20px; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        button { padding: 10px 15px; margin: 5px; background: #007cba; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #005a87; }
+        .result { margin: 10px 0; padding: 10px; border-radius: 3px; white-space: pre-wrap; font-family: monospace; max-height: 300px; overflow-y: auto; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        select { padding: 8px; margin: 5px; border: 1px solid #ddd; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Test Dashboard Fix</h1>
+    
+    <div class="section">
+        <h3>Step 1: Check Available Users</h3>
+        <button onclick="loadUsers()">Load Users</button>
+        <div id="users-result" class="result info">Click to load available users</div>
+    </div>
+
+    <div class="section">
+        <h3>Step 2: Test My Borrows (Fixed)</h3>
+        <div>
+            <label>Select User: </label>
+            <select id="userSelect">
+                <option value="">Select a user</option>
+            </select>
+            <button onclick="testMyBorrows()">Test My Borrows</button>
+        </div>
+        <div id="borrows-result" class="result info">Select a user and test their borrows</div>
+    </div>
+
+    <div class="section">
+        <h3>Step 3: Test Old Endpoint (Should Fail)</h3>
+        <button onclick="testOldEndpoint()">Test /my-borrows (without user_id)</button>
+        <div id="old-result" class="result info">This should show an error message</div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://127.0.0.1:8000/api';
+        let users = [];
+
+        function showResult(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.className = `result ${type}`;
+            element.textContent = message;
+        }
+
+        async function makeRequest(endpoint, options = {}) {
+            try {
+                const response = await fetch(`${API_BASE}${endpoint}`, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        ...options.headers
+                    },
+                    ...options
+                });
+                
+                const data = await response.json();
+                return { success: response.ok, data, status: response.status };
+            } catch (error) {
+                return { success: false, error: error.message };
+            }
+        }
+
+        async function loadUsers() {
+            const result = await makeRequest('/debug-users');
+            
+            if (result.success) {
+                users = result.data.users || [];
+                
+                // Populate user dropdown
+                const select = document.getElementById('userSelect');
+                select.innerHTML = '<option value="">Select a user</option>';
+                users.forEach(user => {
+                    select.innerHTML += `<option value="${user.id}">${user.name} (${user.email})</option>`;
+                });
+                
+                let output = `✅ USERS LOADED!\n\nTotal: ${result.data.total_users}\n\n`;
+                users.forEach(user => {
+                    output += `ID: ${user.id} | ${user.name} (${user.email}) | Role: ${user.role}\n`;
+                });
+                
+                showResult('users-result', output, 'success');
+            } else {
+                showResult('users-result', `❌ Failed: ${result.error || JSON.stringify(result.data)}`, 'error');
+            }
+        }
+
+        async function testMyBorrows() {
+            const userId = document.getElementById('userSelect').value;
+            
+            if (!userId) {
+                showResult('borrows-result', '❌ Please select a user first', 'error');
+                return;
+            }
+            
+            const result = await makeRequest(`/my-borrows?user_id=${userId}`);
+            
+            if (result.success) {
+                const data = result.data;
+                let output = `✅ MY BORROWS SUCCESS!\n\n`;
+                output += `User: ${data.user?.name || 'Unknown'} (${data.user?.email || 'Unknown'})\n`;
+                output += `Total Borrows: ${data.total_borrows || 0}\n`;
+                output += `Active Borrows: ${data.active_borrows || 0}\n\n`;
+                
+                if (data.borrows && data.borrows.length > 0) {
+                    output += `BORROWED BOOKS:\n`;
+                    data.borrows.forEach((borrow, index) => {
+                        output += `${index + 1}. ${borrow.book.title} by ${borrow.book.author}\n`;
+                        output += `   Status: ${borrow.status}\n`;
+                        output += `   Borrowed: ${new Date(borrow.borrowed_at).toLocaleDateString()}\n\n`;
+                    });
+                } else {
+                    output += `No books borrowed by this user.\n`;
+                }
+                
+                showResult('borrows-result', output, 'success');
+            } else {
+                showResult('borrows-result', 
+                    `❌ FAILED!\n\n${result.error || JSON.stringify(result.data, null, 2)}`, 
+                    'error'
+                );
+            }
+        }
+
+        async function testOldEndpoint() {
+            const result = await makeRequest('/my-borrows');
+            
+            // This should fail with a clear error message
+            if (!result.success) {
+                let output = `✅ EXPECTED ERROR (This is good!):\n\n`;
+                output += `Status: ${result.status}\n`;
+                output += `Error: ${result.error || 'Unknown error'}\n\n`;
+                output += `Response: ${JSON.stringify(result.data, null, 2)}`;
+                
+                showResult('old-result', output, 'success');
+            } else {
+                showResult('old-result', 
+                    `❌ UNEXPECTED SUCCESS!\n\nThis endpoint should require user_id parameter.\n\n${JSON.stringify(result.data, null, 2)}`, 
+                    'error'
+                );
+            }
+        }
+
+        // Auto-load users on page load
+        window.onload = function() {
+            loadUsers();
+        };
+    </script>
+</body>
+</html>

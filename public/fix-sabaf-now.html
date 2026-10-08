@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Fix Sabaf Login - INSTANT FIX</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: 20px auto; padding: 20px; background: #f5f5f5; }
+        .container { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .big-button { padding: 20px 30px; font-size: 18px; font-weight: bold; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; width: 100%; margin: 10px 0; }
+        .big-button:hover { background: #218838; }
+        .test-button { padding: 15px 25px; font-size: 16px; background: #007cba; color: white; border: none; border-radius: 5px; cursor: pointer; width: 100%; margin: 10px 0; }
+        .test-button:hover { background: #005a87; }
+        .result { margin: 15px 0; padding: 15px; border-radius: 5px; white-space: pre-wrap; font-family: monospace; font-size: 14px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        h1 { color: #333; text-align: center; }
+        h2 { color: #666; }
+        .step { margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Fix Sabaf Login - INSTANT SOLUTION</h1>
+        
+        <div class="step">
+            <h2>🚀 STEP 1: Create Sabaf User (Click This First!)</h2>
+            <button onclick="createSabafUser()" class="big-button">CREATE SABAF USER NOW</button>
+            <div id="create-result" class="result info">Click the button above to create sabaf@admin.com user</div>
+        </div>
+
+        <div class="step">
+            <h2>🔐 STEP 2: Test Login</h2>
+            <button onclick="testLogin()" class="test-button">TEST SABAF LOGIN</button>
+            <div id="login-result" class="result info">After creating user, test the login here</div>
+        </div>
+
+        <div class="step">
+            <h2>📋 STEP 3: Verify All Users</h2>
+            <button onclick="showAllUsers()" class="test-button">SHOW ALL USERS</button>
+            <div id="users-result" class="result info">Check all users in database</div>
+        </div>
+
+        <div class="step">
+            <h2>✅ Ready to Use</h2>
+            <div class="result success">
+After creating the user, you can login with:
+📧 Email: sabaf@admin.com
+🔑 Password: password
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://127.0.0.1:8000/api';
+
+        function showResult(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.className = `result ${type}`;
+            element.textContent = message;
+        }
+
+        async function makeRequest(endpoint, options = {}) {
+            try {
+                const response = await fetch(`${API_BASE}${endpoint}`, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        ...options.headers
+                    },
+                    ...options
+                });
+                
+                const data = await response.json();
+                return { success: response.ok, data, status: response.status };
+            } catch (error) {
+                return { success: false, error: error.message };
+            }
+        }
+
+        async function createSabafUser() {
+            showResult('create-result', '🔄 Creating Sabaf user...', 'info');
+            
+            const result = await makeRequest('/create-sabaf-admin');
+            
+            if (result.success) {
+                showResult('create-result', 
+                    `✅ SUCCESS! Sabaf user created!\n\n` +
+                    `Name: ${result.data.user.name}\n` +
+                    `Email: ${result.data.user.email}\n` +
+                    `Role: ${result.data.user.role}\n` +
+                    `Password Verification: ${result.data.password_verification}\n\n` +
+                    `✅ You can now login with sabaf@admin.com / password`, 
+                    'success'
+                );
+            } else {
+                showResult('create-result', 
+                    `❌ FAILED to create user!\n\n` +
+                    `Error: ${result.error || JSON.stringify(result.data, null, 2)}\n\n` +
+                    `Make sure Laravel server is running: php artisan serve`, 
+                    'error'
+                );
+            }
+        }
+
+        async function testLogin() {
+            showResult('login-result', '🔄 Testing login...', 'info');
+            
+            const result = await makeRequest('/simple-login', {
+                method: 'POST',
+                body: JSON.stringify({
+                    email: 'sabaf@admin.com',
+                    password: 'password'
+                })
+            });
+            
+            if (result.success) {
+                showResult('login-result', 
+                    `✅ LOGIN SUCCESS!\n\n` +
+                    `Welcome ${result.data.user.name}!\n` +
+                    `Email: ${result.data.user.email}\n` +
+                    `Role: ${result.data.user.role}\n` +
+                    `Token: ${result.data.token}\n\n` +
+                    `🎉 Login is working perfectly!`, 
+                    'success'
+                );
+            } else {
+                showResult('login-result', 
+                    `❌ LOGIN FAILED!\n\n` +
+                    `${result.error || JSON.stringify(result.data, null, 2)}\n\n` +
+                    `Make sure you created the user first (Step 1)`, 
+                    'error'
+                );
+            }
+        }
+
+        async function showAllUsers() {
+            showResult('users-result', '🔄 Loading users...', 'info');
+            
+            const result = await makeRequest('/debug-users');
+            
+            if (result.success) {
+                let output = `✅ USERS IN DATABASE:\n\n`;
+                output += `Total Users: ${result.data.total_users}\n\n`;
+                
+                if (result.data.users && result.data.users.length > 0) {
+                    result.data.users.forEach((user, index) => {
+                        output += `${index + 1}. ${user.name}\n`;
+                        output += `   📧 ${user.email}\n`;
+                        output += `   👤 Role: ${user.role}\n`;
+                        output += `   📅 Created: ${user.created_at}\n\n`;
+                    });
+                } else {
+                    output += `❌ No users found!\n`;
+                    output += `Run Step 1 to create Sabaf user.`;
+                }
+                
+                showResult('users-result', output, 'success');
+            } else {
+                showResult('users-result', 
+                    `❌ FAILED to get users!\n\n` +
+                    `Error: ${result.error || JSON.stringify(result.data, null, 2)}`, 
+                    'error'
+                );
+            }
+        }
+
+        // Auto-check server on page load
+        window.onload = async function() {
+            // Test if server is running
+            try {
+                const testResult = await makeRequest('/test');
+                if (testResult.success) {
+                    showResult('create-result', '✅ Server is running! Click "CREATE SABAF USER NOW" to fix login.', 'success');
+                } else {
+                    showResult('create-result', '❌ Server not responding. Start server with: php artisan serve', 'error');
+                }
+            } catch (error) {
+                showResult('create-result', '❌ Server not running. Start server with: php artisan serve', 'error');
+            }
+        };
+    </script>
+</body>
+</html>

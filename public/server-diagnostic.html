@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Server Diagnostic</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 20px auto; padding: 20px; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        button { padding: 10px 15px; margin: 5px; background: #007cba; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #005a87; }
+        .result { margin: 10px 0; padding: 10px; border-radius: 3px; white-space: pre-wrap; font-family: monospace; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Laravel Server Diagnostic</h1>
+    
+    <div class="section">
+        <h3>Step 1: Basic Server Test</h3>
+        <button onclick="testBasicServer()">Test Server Connection</button>
+        <div id="basic-result" class="result info">Click to test basic server connection</div>
+    </div>
+
+    <div class="section">
+        <h3>Step 2: API Routes Test</h3>
+        <button onclick="testApiRoutes()">Test API Routes</button>
+        <div id="api-result" class="result info">Click to test API endpoints</div>
+    </div>
+
+    <div class="section">
+        <h3>Step 3: Database Connection</h3>
+        <button onclick="testDatabase()">Test Database</button>
+        <div id="db-result" class="result info">Click to test database connection</div>
+    </div>
+
+    <div class="section">
+        <h3>Step 4: CORS Test</h3>
+        <button onclick="testCors()">Test CORS Headers</button>
+        <div id="cors-result" class="result info">Click to test CORS configuration</div>
+    </div>
+
+    <script>
+        function showResult(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.className = `result ${type}`;
+            element.textContent = message;
+        }
+
+        async function makeRequest(url, options = {}) {
+            try {
+                const response = await fetch(url, {
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    },
+                    ...options
+                });
+                
+                const data = await response.json();
+                return { 
+                    success: response.ok, 
+                    data, 
+                    status: response.status,
+                    headers: Object.fromEntries(response.headers.entries())
+                };
+            } catch (error) {
+                return { success: false, error: error.message };
+            }
+        }
+
+        async function testBasicServer() {
+            showResult('basic-result', '🔄 Testing server connection...', 'info');
+            
+            const result = await makeRequest('http://127.0.0.1:8000/test');
+            
+            if (result.success) {
+                let output = `✅ SERVER IS WORKING!\n\n`;
+                output += `Status: ${result.status}\n`;
+                output += `Message: ${result.data.message}\n`;
+                output += `PHP Version: ${result.data.php_version}\n`;
+                output += `Laravel Version: ${result.data.laravel_version}\n`;
+                output += `Timestamp: ${result.data.timestamp}`;
+                
+                showResult('basic-result', output, 'success');
+            } else {
+                showResult('basic-result', 
+                    `❌ SERVER CONNECTION FAILED!\n\nError: ${result.error}\n\nMake sure Laravel server is running:\nphp artisan serve`, 
+                    'error'
+                );
+            }
+        }
+
+        async function testApiRoutes() {
+            showResult('api-result', '🔄 Testing API routes...', 'info');
+            
+            const endpoints = [
+                '/api/test',
+                '/api/debug-users',
+                '/api/books',
+                '/api/borrows'
+            ];
+            
+            let results = 'API ENDPOINTS TEST:\n\n';
+            
+            for (const endpoint of endpoints) {
+                const result = await makeRequest(`http://127.0.0.1:8000${endpoint}`);
+                const status = result.success ? '✅' : '❌';
+                results += `${status} ${endpoint} - Status: ${result.status || 'Failed'}\n`;
+                
+                if (!result.success && result.error) {
+                    results += `   Error: ${result.error}\n`;
+                }
+            }
+            
+            showResult('api-result', results, 'info');
+        }
+
+        async function testDatabase() {
+            showResult('db-result', '🔄 Testing database connection...', 'info');
+            
+            const result = await makeRequest('http://127.0.0.1:8000/api/debug-users');
+            
+            if (result.success) {
+                let output = `✅ DATABASE CONNECTION WORKING!\n\n`;
+                output += `Total Users: ${result.data.total_users || 0}\n`;
+                
+                if (result.data.users && result.data.users.length > 0) {
+                    output += `\nSample Users:\n`;
+                    result.data.users.slice(0, 3).forEach(user => {
+                        output += `- ${user.name} (${user.email}) - ${user.role}\n`;
+                    });
+                }
+                
+                showResult('db-result', output, 'success');
+            } else {
+                showResult('db-result', 
+                    `❌ DATABASE CONNECTION FAILED!\n\nError: ${result.error || 'Unknown error'}\n\nCheck:\n1. MySQL is running\n2. Database 'Library_ms' exists\n3. .env file has correct DB settings`, 
+                    'error'
+                );
+            }
+        }
+
+        async function testCors() {
+            showResult('cors-result', '🔄 Testing CORS headers...', 'info');
+            
+            const result = await makeRequest('http://127.0.0.1:8000/api/test');
+            
+            if (result.success) {
+                let output = `✅ CORS TEST RESULTS:\n\n`;
+                
+                const corsHeaders = [
+                    'access-control-allow-origin',
+                    'access-control-allow-methods',
+                    'access-control-allow-headers',
+                    'access-control-allow-credentials'
+                ];
+                
+                corsHeaders.forEach(header => {
+                    const value = result.headers[header];
+                    const status = value ? '✅' : '❌';
+                    output += `${status} ${header}: ${value || 'Not set'}\n`;
+                });
+                
+                output += `\n📝 Response Data:\n${JSON.stringify(result.data, null, 2)}`;
+                
+                showResult('cors-result', output, 'success');
+            } else {
+                showResult('cors-result', 
+                    `❌ CORS TEST FAILED!\n\nError: ${result.error}`, 
+                    'error'
+                );
+            }
+        }
+
+        // Auto-run basic test on page load
+        window.onload = function() {
+            testBasicServer();
+        };
+    </script>
+</body>
+</html>

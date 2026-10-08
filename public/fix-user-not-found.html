@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Fix User Not Found Error</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 20px auto; padding: 20px; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        button { padding: 15px 25px; margin: 5px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; }
+        button:hover { background: #218838; }
+        .result { margin: 10px 0; padding: 10px; border-radius: 3px; white-space: pre-wrap; font-family: monospace; max-height: 300px; overflow-y: auto; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        h1 { color: #333; text-align: center; }
+        .big-button { padding: 20px 30px; font-size: 18px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Fix "User Not Found" Error</h1>
+    
+    <div class="section">
+        <h3>🚀 Quick Fix (Do This First!)</h3>
+        <button onclick="fixEverything()" class="big-button">FIX ALL USERS NOW</button>
+        <div id="fix-all-result" class="result info">Click the button above to create all necessary users</div>
+    </div>
+
+    <div class="section">
+        <h3>Step 1: Check Current Users</h3>
+        <button onclick="checkUsers()">Check Existing Users</button>
+        <div id="users-result" class="result info">Click to see what users exist in database</div>
+    </div>
+
+    <div class="section">
+        <h3>Step 2: Create Demo Users</h3>
+        <button onclick="createDemoUsers()">Create Demo Users</button>
+        <div id="demo-result" class="result info">Creates admin, librarian, and regular users</div>
+    </div>
+
+    <div class="section">
+        <h3>Step 3: Create Sabaf Admin</h3>
+        <button onclick="createSabafAdmin()">Create Sabaf Admin</button>
+        <div id="sabaf-result" class="result info">Creates your personal admin account</div>
+    </div>
+
+    <div class="section">
+        <h3>Step 4: Test Login</h3>
+        <button onclick="testLogin()">Test Sabaf Login</button>
+        <div id="login-result" class="result info">Test if login works with created users</div>
+    </div>
+
+    <div class="section">
+        <h3>✅ Ready to Use</h3>
+        <div class="result success">
+After fixing, you can login with:
+📧 sabaf@admin.com / password (Your Admin)
+📧 admin@library.com / password (System Admin)
+📧 librarian@library.com / password (Librarian)
+📧 user@library.com / password (Regular User)
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://127.0.0.1:8000/api';
+
+        function showResult(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.className = `result ${type}`;
+            element.textContent = message;
+        }
+
+        async function makeRequest(endpoint, options = {}) {
+            try {
+                const response = await fetch(`${API_BASE}${endpoint}`, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        ...options.headers
+                    },
+                    ...options
+                });
+                
+                const data = await response.json();
+                return { success: response.ok, data, status: response.status };
+            } catch (error) {
+                return { success: false, error: error.message };
+            }
+        }
+
+        async function fixEverything() {
+            showResult('fix-all-result', '🔄 Fixing all user issues...', 'info');
+            
+            let results = '🔧 COMPLETE USER FIX:\n\n';
+            
+            // Step 1: Create demo users
+            results += '1. Creating demo users...\n';
+            const demoResult = await makeRequest('/create-demo-users');
+            if (demoResult.success) {
+                results += '   ✅ Demo users created\n';
+            } else {
+                results += '   ❌ Demo users failed\n';
+            }
+            
+            // Step 2: Create Sabaf admin
+            results += '2. Creating Sabaf admin...\n';
+            const sabafResult = await makeRequest('/create-sabaf-admin');
+            if (sabafResult.success) {
+                results += '   ✅ Sabaf admin created\n';
+            } else {
+                results += '   ❌ Sabaf admin failed\n';
+            }
+            
+            // Step 3: Check final user count
+            results += '3. Checking final user count...\n';
+            const usersResult = await makeRequest('/debug-users');
+            if (usersResult.success) {
+                results += `   ✅ Total users: ${usersResult.data.total_users}\n`;
+                
+                if (usersResult.data.users && usersResult.data.users.length > 0) {
+                    results += '\n📋 AVAILABLE USERS:\n';
+                    usersResult.data.users.forEach(user => {
+                        results += `   • ${user.name} (${user.email}) - ${user.role}\n`;
+                    });
+                }
+            } else {
+                results += '   ❌ User check failed\n';
+            }
+            
+            results += '\n🎉 FIX COMPLETE!\n\n';
+            results += 'You can now:\n';
+            results += '1. Refresh your React app\n';
+            results += '2. Login with any of the users above\n';
+            results += '3. The "User not found" error should be gone!';
+            
+            showResult('fix-all-result', results, 'success');
+        }
+
+        async function checkUsers() {
+            showResult('users-result', '🔄 Checking users...', 'info');
+            
+            const result = await makeRequest('/debug-users');
+            
+            if (result.success) {
+                let output = `✅ USERS IN DATABASE:\n\n`;
+                output += `Total Users: ${result.data.total_users}\n\n`;
+                
+                if (result.data.users && result.data.users.length > 0) {
+                    result.data.users.forEach((user, index) => {
+                        output += `${index + 1}. ${user.name}\n`;
+                        output += `   📧 ${user.email}\n`;
+                        output += `   👤 Role: ${user.role}\n`;
+                        output += `   🆔 ID: ${user.id}\n\n`;
+                    });
+                } else {
+                    output += `❌ No users found!\n`;
+                    output += `Click "Create Demo Users" to fix this.`;
+                }
+                
+                showResult('users-result', output, 'success');
+            } else {
+                showResult('users-result', 
+                    `❌ FAILED to get users!\n\nError: ${result.error || JSON.stringify(result.data, null, 2)}`, 
+                    'error'
+                );
+            }
+        }
+
+        async function createDemoUsers() {
+            showResult('demo-result', '🔄 Creating demo users...', 'info');
+            
+            const result = await makeRequest('/create-demo-users');
+            
+            if (result.success) {
+                let output = `✅ DEMO USERS CREATED!\n\n`;
+                
+                if (result.data.users && result.data.users.length > 0) {
+                    result.data.users.forEach(user => {
+                        output += `• ${user.name} (${user.email}) - ${user.role}\n`;
+                    });
+                }
+                
+                showResult('demo-result', output, 'success');
+            } else {
+                showResult('demo-result', 
+                    `❌ FAILED to create demo users!\n\nError: ${result.error || JSON.stringify(result.data, null, 2)}`, 
+                    'error'
+                );
+            }
+        }
+
+        async function createSabafAdmin() {
+            showResult('sabaf-result', '🔄 Creating Sabaf admin...', 'info');
+            
+            const result = await makeRequest('/create-sabaf-admin');
+            
+            if (result.success) {
+                let output = `✅ SABAF ADMIN CREATED!\n\n`;
+                output += `Name: ${result.data.user.name}\n`;
+                output += `Email: ${result.data.user.email}\n`;
+                output += `Role: ${result.data.user.role}\n`;
+                output += `Password Verification: ${result.data.password_verification}\n\n`;
+                output += `✅ You can now login with:\n`;
+                output += `📧 sabaf@admin.com\n`;
+                output += `🔑 password`;
+                
+                showResult('sabaf-result', output, 'success');
+            } else {
+                showResult('sabaf-result', 
+                    `❌ FAILED to create Sabaf admin!\n\nError: ${result.error || JSON.stringify(result.data, null, 2)}`, 
+                    'error'
+                );
+            }
+        }
+
+        async function testLogin() {
+            showResult('login-result', '🔄 Testing login...', 'info');
+            
+            const result = await makeRequest('/simple-login', {
+                method: 'POST',
+                body: JSON.stringify({
+                    email: 'sabaf@admin.com',
+                    password: 'password'
+                })
+            });
+            
+            if (result.success) {
+                let output = `✅ LOGIN TEST SUCCESS!\n\n`;
+                output += `Welcome ${result.data.user.name}!\n`;
+                output += `Email: ${result.data.user.email}\n`;
+                output += `Role: ${result.data.user.role}\n`;
+                output += `Token: ${result.data.token}\n\n`;
+                output += `🎉 Login is working perfectly!\n`;
+                output += `The "User not found" error is fixed!`;
+                
+                showResult('login-result', output, 'success');
+            } else {
+                showResult('login-result', 
+                    `❌ LOGIN TEST FAILED!\n\n${result.error || JSON.stringify(result.data, null, 2)}\n\nMake sure you created the users first.`, 
+                    'error'
+                );
+            }
+        }
+
+        // Auto-check users on page load
+        window.onload = function() {
+            checkUsers();
+        };
+    </script>
+</body>
+</html>

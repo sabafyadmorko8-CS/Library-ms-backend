@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Registration</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input, select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+        button { background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .result { margin-top: 20px; padding: 15px; border-radius: 4px; }
+        .success { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .error { background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+        .info { background: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 4px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test User Registration</h1>
+    
+    <form id="registrationForm">
+        <div class="form-group">
+            <label for="name">Name:</label>
+            <input type="text" id="name" name="name" value="Test User" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="email">Email:</label>
+            <input type="email" id="email" name="email" value="test@example.com" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="password">Password:</label>
+            <input type="password" id="password" name="password" value="password123" required minlength="8">
+        </div>
+        
+        <div class="form-group">
+            <label for="password_confirmation">Confirm Password:</label>
+            <input type="password" id="password_confirmation" name="password_confirmation" value="password123" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="role">Role:</label>
+            <select id="role" name="role">
+                <option value="user">User</option>
+                <option value="librarian">Librarian</option>
+                <option value="admin">Admin</option>
+            </select>
+        </div>
+        
+        <button type="submit">Test Registration</button>
+    </form>
+    
+    <div id="result"></div>
+    
+    <hr style="margin: 30px 0;">
+    
+    <h2>🔍 Quick Tests</h2>
+    <button onclick="testAPI()">Test API Connection</button>
+    <button onclick="checkDatabase()">Check Database</button>
+    <button onclick="testMigration()">Check Migration Status</button>
+    <button onclick="checkRegistrationSetup()">Check Registration Setup</button>
+    
+    <script>
+        document.getElementById('registrationForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const data = Object.fromEntries(formData);
+            
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<div class="info">Testing registration...</div>';
+            
+            try {
+                const response = await fetch('/api/test-register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <h3>✅ Registration Successful!</h3>
+                            <p><strong>Message:</strong> ${result.message}</p>
+                            <p><strong>User ID:</strong> ${result.user.id}</p>
+                            <p><strong>Name:</strong> ${result.user.name}</p>
+                            <p><strong>Email:</strong> ${result.user.email}</p>
+                            <p><strong>Role:</strong> ${result.user.role}</p>
+                            <p><strong>Status:</strong> ${result.user.status || 'approved'}</p>
+                            ${result.token ? `<p><strong>Token:</strong> ${result.token.substring(0, 20)}...</p>` : ''}
+                            ${result.note ? `<p><strong>Note:</strong> ${result.note}</p>` : ''}
+                        </div>
+                        <details>
+                            <summary>Debug Info</summary>
+                            <pre>${JSON.stringify(result.debug || result, null, 2)}</pre>
+                        </details>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            <h3>❌ Registration Failed</h3>
+                            <p><strong>Error:</strong> ${result.message || result.error}</p>
+                            ${result.errors ? `<p><strong>Validation Errors:</strong> ${JSON.stringify(result.errors)}</p>` : ''}
+                        </div>
+                        <details>
+                            <summary>Debug Info</summary>
+                            <pre>${JSON.stringify(result, null, 2)}</pre>
+                        </details>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h3>❌ Network Error</h3>
+                        <p><strong>Error:</strong> ${error.message}</p>
+                        <p>Make sure your Laravel server is running on http://127.0.0.1:8000</p>
+                    </div>
+                `;
+            }
+        });
+        
+        async function testAPI() {
+            const resultDiv = document.getElementById('result');
+            try {
+                const response = await fetch('/api/test');
+                const result = await response.json();
+                resultDiv.innerHTML = `
+                    <div class="success">
+                        <h3>✅ API Connection Working</h3>
+                        <pre>${JSON.stringify(result, null, 2)}</pre>
+                    </div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h3>❌ API Connection Failed</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        async function checkDatabase() {
+            const resultDiv = document.getElementById('result');
+            try {
+                const response = await fetch('/api/debug-users');
+                const result = await response.json();
+                resultDiv.innerHTML = `
+                    <div class="success">
+                        <h3>✅ Database Connection Working</h3>
+                        <p><strong>Total Users:</strong> ${result.total_users}</p>
+                        <details>
+                            <summary>All Users</summary>
+                            <pre>${JSON.stringify(result.users, null, 2)}</pre>
+                        </details>
+                    </div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h3>❌ Database Connection Failed</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        async function testMigration() {
+            const resultDiv = document.getElementById('result');
+            try {
+                const response = await fetch('/api/test-books-table');
+                const result = await response.json();
+                
+                const hasStatusColumn = result.table_columns && result.table_columns.includes('status');
+                
+                resultDiv.innerHTML = `
+                    <div class="${hasStatusColumn ? 'success' : 'info'}">
+                        <h3>${hasStatusColumn ? '✅' : 'ℹ️'} Migration Status</h3>
+                        <p><strong>Books Table Exists:</strong> ${result.table_exists ? 'Yes' : 'No'}</p>
+                        <p><strong>Has Status Column:</strong> ${hasStatusColumn ? 'Yes' : 'No'}</p>
+                        ${!hasStatusColumn ? '<p><strong>Action Needed:</strong> Run "php artisan migrate" to enable user verification</p>' : ''}
+                        <details>
+                            <summary>Table Columns</summary>
+                            <pre>${JSON.stringify(result.table_columns, null, 2)}</pre>
+                        </details>
+                    </div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h3>❌ Migration Check Failed</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        async function checkRegistrationSetup() {
+            const resultDiv = document.getElementById('result');
+            try {
+                const response = await fetch('/api/check-registration-setup');
+                const result = await response.json();
+                
+                const isReady = result.ready_for_registration;
+                const hasStatus = result.checks.has_status_column;
+                
+                resultDiv.innerHTML = `
+                    <div class="${isReady ? 'success' : 'error'}">
+                        <h3>${isReady ? '✅' : '❌'} Registration Setup Check</h3>
+                        <p><strong>Users Table Exists:</strong> ${result.checks.users_table_exists ? 'Yes' : 'No'}</p>
+                        <p><strong>Has Status Column:</strong> ${hasStatus ? 'Yes' : 'No'}</p>
+                        <p><strong>Total Users:</strong> ${result.checks.total_users}</p>
+                        <p><strong>Ready for Registration:</strong> ${isReady ? 'Yes' : 'No'}</p>
+                        
+                        <details>
+                            <summary>User Table Columns</summary>
+                            <pre>${JSON.stringify(result.checks.users_columns, null, 2)}</pre>
+                        </details>
+                        
+                        <details>
+                            <summary>Model Fillable Fields</summary>
+                            <pre>${JSON.stringify(result.checks.fillable_fields, null, 2)}</pre>
+                        </details>
+                        
+                        ${result.checks.sample_user ? `
+                        <details>
+                            <summary>Sample User</summary>
+                            <pre>${JSON.stringify(result.checks.sample_user, null, 2)}</pre>
+                        </details>
+                        ` : ''}
+                    </div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h3>❌ Registration Setup Check Failed</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

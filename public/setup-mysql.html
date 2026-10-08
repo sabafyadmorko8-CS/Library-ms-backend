@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>MySQL Setup - Library Management System</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 1000px; margin: 20px auto; padding: 20px; }
+        .step { margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
+        .step h3 { margin-top: 0; color: #333; }
+        button { padding: 12px 20px; margin: 5px; background: #007cba; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 14px; }
+        button:hover { background: #005a87; }
+        .big-button { padding: 15px 25px; font-size: 16px; font-weight: bold; background: #28a745; }
+        .result { margin: 10px 0; padding: 15px; border-radius: 3px; white-space: pre-wrap; font-family: monospace; max-height: 300px; overflow-y: auto; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        .config-box { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 10px 0; }
+        .step-number { background: #007cba; color: white; border-radius: 50%; width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; margin-right: 10px; }
+    </style>
+</head>
+<body>
+    <h1>🗄️ MySQL Database Setup</h1>
+    <p>Convert your Library Management System from SQLite to MySQL</p>
+
+    <div class="step">
+        <h3><span class="step-number">1</span>Prerequisites Check</h3>
+        <p>Make sure MySQL is running on your system (XAMPP, WAMP, or standalone MySQL)</p>
+        <button onclick="checkMySQL()">Check MySQL Connection</button>
+        <div id="mysql-check" class="result"></div>
+    </div>
+
+    <div class="step">
+        <h3><span class="step-number">2</span>Create Database</h3>
+        <p>Create the MySQL database for your Library Management System</p>
+        <button onclick="createDatabase()" class="big-button">🔧 CREATE MYSQL DATABASE</button>
+        <div id="create-db-result" class="result"></div>
+        
+        <div class="config-box">
+            <strong>Database Configuration:</strong><br>
+            • Host: 127.0.0.1<br>
+            • Port: 3306<br>
+            • Database: Library_ms<br>
+            • Username: root<br>
+            • Password: (empty)
+        </div>
+    </div>
+
+    <div class="step">
+        <h3><span class="step-number">3</span>Run Migrations</h3>
+        <p>Create all the database tables (users, books, borrows, etc.)</p>
+        <button onclick="runMigrations()">Run Database Migrations</button>
+        <div id="migrations-result" class="result"></div>
+        
+        <div class="warning">
+            <strong>Alternative:</strong> Run this command in your terminal:<br>
+            <code>php artisan config:clear && php artisan migrate:fresh</code>
+        </div>
+    </div>
+
+    <div class="step">
+        <h3><span class="step-number">4</span>Create Demo Data</h3>
+        <p>Populate the database with sample users and books</p>
+        <button onclick="createDemoData()">Create Demo Users & Books</button>
+        <div id="demo-result" class="result"></div>
+    </div>
+
+    <div class="step">
+        <h3><span class="step-number">5</span>Verify Setup</h3>
+        <p>Test that everything is working correctly</p>
+        <button onclick="verifySetup()">Verify Complete Setup</button>
+        <div id="verify-result" class="result"></div>
+    </div>
+
+    <div class="step">
+        <h3>🎉 Success! Next Steps</h3>
+        <div id="success-info" class="info" style="display: none;">
+            <strong>Your MySQL database is ready!</strong><br><br>
+            
+            <strong>Access Your App:</strong><br>
+            • React Frontend: <a href="http://localhost:3000" target="_blank">http://localhost:3000</a><br>
+            • Laravel API: <a href="http://127.0.0.1:8000/api/test" target="_blank">http://127.0.0.1:8000/api/test</a><br>
+            • phpMyAdmin: <a href="http://localhost/phpmyadmin" target="_blank">http://localhost/phpmyadmin</a><br>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://127.0.0.1:8000/api';
+
+        function showResult(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.className = `result ${type}`;
+            element.textContent = message;
+        }
+
+        async function makeRequest(endpoint, options = {}) {
+            try {
+                const response = await fetch(`${API_BASE}${endpoint}`, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        ...options.headers
+                    },
+                    ...options
+                });
+                
+                const data = await response.json();
+                return { success: response.ok, data, status: response.status };
+            } catch (error) {
+                return { success: false, error: error.message };
+            }
+        }
+
+        async function checkMySQL() {
+            showResult('mysql-check', 'Checking MySQL connection...', 'info');
+            
+            const result = await makeRequest('/test');
+            if (result.success) {
+                showResult('mysql-check', '✅ Laravel API is running!\nNow check if MySQL is accessible...', 'success');
+            } else {
+                showResult('mysql-check', '❌ Laravel API not accessible. Make sure server is running:\nphp artisan serve', 'error');
+            }
+        }
+
+        async function createDatabase() {
+            showResult('create-db-result', 'Creating MySQL database...', 'info');
+            
+            const result = await makeRequest('/create-mysql-database');
+            if (result.success) {
+                showResult('create-db-result', `✅ Database Created Successfully!\n${JSON.stringify(result.data, null, 2)}`, 'success');
+            } else {
+                showResult('create-db-result', `❌ Database Creation Failed:\n${result.error || JSON.stringify(result.data, null, 2)}`, 'error');
+            }
+        }
+
+        async function runMigrations() {
+            showResult('migrations-result', 'Running database migrations...', 'info');
+            
+            const result = await makeRequest('/fix-database');
+            if (result.success) {
+                showResult('migrations-result', `✅ Migrations Completed!\n${JSON.stringify(result.data, null, 2)}`, 'success');
+            } else {
+                showResult('migrations-result', `❌ Migrations Failed:\n${result.error || JSON.stringify(result.data, null, 2)}`, 'error');
+            }
+        }
+
+        async function createDemoData() {
+            showResult('demo-result', 'Creating demo users and books...', 'info');
+            
+            const result = await makeRequest('/auto-setup');
+            if (result.success) {
+                showResult('demo-result', `✅ Demo Data Created!\n${JSON.stringify(result.data, null, 2)}`, 'success');
+            } else {
+                showResult('demo-result', `❌ Demo Data Creation Failed:\n${result.error || JSON.stringify(result.data, null, 2)}`, 'error');
+            }
+        }
+
+        async function verifySetup() {
+            showResult('verify-result', 'Verifying complete setup...', 'info');
+            
+            let results = 'MYSQL SETUP VERIFICATION:\n\n';
+            let allGood = true;
+            
+            // Check API
+            const apiResult = await makeRequest('/test');
+            results += `API Connection: ${apiResult.success ? '✅ Working' : '❌ Failed'}\n`;
+            if (!apiResult.success) allGood = false;
+            
+            // Check Users
+            const usersResult = await makeRequest('/debug-users');
+            results += `Users Table: ${usersResult.success ? '✅ Working' : '❌ Failed'}\n`;
+            if (!usersResult.success) allGood = false;
+            
+            // Check Books
+            const booksResult = await makeRequest('/books');
+            results += `Books Table: ${booksResult.success ? '✅ Working' : '❌ Failed'}\n`;
+            if (!booksResult.success) allGood = false;
+            
+            // Check Borrows
+            const borrowsResult = await makeRequest('/borrows');
+            results += `Borrows Table: ${borrowsResult.success ? '✅ Working' : '❌ Failed'}\n`;
+            if (!borrowsResult.success) allGood = false;
+            
+            results += '\n' + (allGood 
+                ? '🎉 ALL SYSTEMS WORKING WITH MYSQL!\n\nYour Library Management System is ready to use!' 
+                : '⚠️ Some systems need attention. Check the steps above.');
+            
+            showResult('verify-result', results, allGood ? 'success' : 'warning');
+            
+            if (allGood) {
+                document.getElementById('success-info').style.display = 'block';
+            }
+        }
+
+        // Auto-run MySQL check on page load
+        window.onload = function() {
+            showResult('mysql-check', 'Click "Check MySQL Connection" to start setup', 'info');
+        };
+    </script>
+</body>
+</html>

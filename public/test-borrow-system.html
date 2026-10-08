@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Borrow System</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 1000px; margin: 20px auto; padding: 20px; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        button { padding: 10px 15px; margin: 5px; background: #007cba; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #005a87; }
+        .result { margin: 10px 0; padding: 10px; border-radius: 3px; white-space: pre-wrap; font-family: monospace; max-height: 400px; overflow-y: auto; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        input, select { padding: 8px; margin: 5px; border: 1px solid #ddd; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Test Borrow System</h1>
+    
+    <div class="section">
+        <h3>Step 1: Check Users</h3>
+        <button onclick="checkUsers()">Show All Users</button>
+        <div id="users-result" class="result info">Click button to see available users</div>
+    </div>
+
+    <div class="section">
+        <h3>Step 2: Check Books</h3>
+        <button onclick="checkBooks()">Show Available Books</button>
+        <div id="books-result" class="result info">Click button to see available books</div>
+    </div>
+
+    <div class="section">
+        <h3>Step 3: Test Borrowing</h3>
+        <div>
+            <label>User ID: </label>
+            <select id="userId">
+                <option value="">Select User</option>
+            </select>
+            <label>Book ID: </label>
+            <select id="bookId">
+                <option value="">Select Book</option>
+            </select>
+            <button onclick="borrowBook()">Borrow Book</button>
+        </div>
+        <div id="borrow-result" class="result info">Select user and book, then click borrow</div>
+    </div>
+
+    <div class="section">
+        <h3>Step 4: Check User's Borrows</h3>
+        <div>
+            <label>Check borrows for User ID: </label>
+            <select id="checkUserId">
+                <option value="">Select User</option>
+            </select>
+            <button onclick="checkUserBorrows()">Check Borrows</button>
+        </div>
+        <div id="user-borrows-result" class="result info">Select user to check their borrowed books</div>
+    </div>
+
+    <div class="section">
+        <h3>Step 5: All Borrows (Admin View)</h3>
+        <button onclick="checkAllBorrows()">Show All Borrows</button>
+        <div id="all-borrows-result" class="result info">Click to see all borrow records</div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://127.0.0.1:8000/api';
+        let users = [];
+        let books = [];
+
+        function showResult(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.className = `result ${type}`;
+            element.textContent = message;
+        }
+
+        async function makeRequest(endpoint, options = {}) {
+            try {
+                const response = await fetch(`${API_BASE}${endpoint}`, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        ...options.headers
+                    },
+                    ...options
+                });
+                
+                const data = await response.json();
+                return { success: response.ok, data, status: response.status };
+            } catch (error) {
+                return { success: false, error: error.message };
+            }
+        }
+
+        async function checkUsers() {
+            const result = await makeRequest('/debug-users');
+            
+            if (result.success) {
+                users = result.data.users || [];
+                
+                // Populate user dropdowns
+                const userSelects = ['userId', 'checkUserId'];
+                userSelects.forEach(selectId => {
+                    const select = document.getElementById(selectId);
+                    select.innerHTML = '<option value="">Select User</option>';
+                    users.forEach(user => {
+                        select.innerHTML += `<option value="${user.id}">${user.name} (${user.email})</option>`;
+                    });
+                });
+                
+                let output = `✅ USERS FOUND!\n\nTotal: ${result.data.total_users}\n\n`;
+                users.forEach(user => {
+                    output += `ID: ${user.id} | ${user.name} (${user.email}) | Role: ${user.role}\n`;
+                });
+                
+                showResult('users-result', output, 'success');
+            } else {
+                showResult('users-result', `❌ Failed: ${result.error || JSON.stringify(result.data)}`, 'error');
+            }
+        }
+
+        async function checkBooks() {
+            const result = await makeRequest('/books');
+            
+            if (result.success) {
+                books = result.data || [];
+                
+                // Populate book dropdown
+                const bookSelect = document.getElementById('bookId');
+                bookSelect.innerHTML = '<option value="">Select Book</option>';
+                books.forEach(book => {
+                    if (book.quantity > 0) {
+                        bookSelect.innerHTML += `<option value="${book.id}">${book.title} by ${book.author} (${book.quantity} available)</option>`;
+                    }
+                });
+                
+                let output = `✅ BOOKS FOUND!\n\nTotal: ${books.length}\n\n`;
+                books.forEach(book => {
+                    output += `ID: ${book.id} | ${book.title} by ${book.author} | Available: ${book.quantity}\n`;
+                });
+                
+                showResult('books-result', output, 'success');
+            } else {
+                showResult('books-result', `❌ Failed: ${result.error || JSON.stringify(result.data)}`, 'error');
+            }
+        }
+
+        async function borrowBook() {
+            const userId = document.getElementById('userId').value;
+            const bookId = document.getElementById('bookId').value;
+            
+            if (!userId || !bookId) {
+                showResult('borrow-result', '❌ Please select both user and book', 'error');
+                return;
+            }
+            
+            const result = await makeRequest('/borrows', {
+                method: 'POST',
+                body: JSON.stringify({
+                    user_id: parseInt(userId),
+                    book_id: parseInt(bookId)
+                })
+            });
+            
+            if (result.success) {
+                showResult('borrow-result', 
+                    `✅ BORROW SUCCESS!\n\n${JSON.stringify(result.data, null, 2)}`, 
+                    'success'
+                );
+                // Refresh books to show updated quantities
+                checkBooks();
+            } else {
+                showResult('borrow-result', 
+                    `❌ BORROW FAILED!\n\n${result.error || JSON.stringify(result.data, null, 2)}`, 
+                    'error'
+                );
+            }
+        }
+
+        async function checkUserBorrows() {
+            const userId = document.getElementById('checkUserId').value;
+            
+            if (!userId) {
+                showResult('user-borrows-result', '❌ Please select a user', 'error');
+                return;
+            }
+            
+            const result = await makeRequest(`/my-borrows?user_id=${userId}`);
+            
+            if (result.success) {
+                const data = result.data;
+                let output = `✅ USER BORROWS!\n\n`;
+                output += `User: ${data.user?.name || 'Unknown'} (${data.user?.email || 'Unknown'})\n`;
+                output += `Total Borrows: ${data.total_borrows || 0}\n`;
+                output += `Active Borrows: ${data.active_borrows || 0}\n\n`;
+                
+                if (data.borrows && data.borrows.length > 0) {
+                    output += `BORROWED BOOKS:\n`;
+                    data.borrows.forEach((borrow, index) => {
+                        output += `${index + 1}. ${borrow.book.title} by ${borrow.book.author}\n`;
+                        output += `   Status: ${borrow.status}\n`;
+                        output += `   Borrowed: ${new Date(borrow.borrowed_at).toLocaleDateString()}\n`;
+                        if (borrow.returned_at) {
+                            output += `   Returned: ${new Date(borrow.returned_at).toLocaleDateString()}\n`;
+                        }
+                        output += `\n`;
+                    });
+                } else {
+                    output += `No books borrowed by this user.\n`;
+                }
+                
+                showResult('user-borrows-result', output, 'success');
+            } else {
+                showResult('user-borrows-result', 
+                    `❌ FAILED!\n\n${result.error || JSON.stringify(result.data, null, 2)}`, 
+                    'error'
+                );
+            }
+        }
+
+        async function checkAllBorrows() {
+            const result = await makeRequest('/borrows');
+            
+            if (result.success) {
+                const borrows = result.data || [];
+                let output = `✅ ALL BORROWS!\n\nTotal: ${borrows.length}\n\n`;
+                
+                if (borrows.length > 0) {
+                    borrows.forEach((borrow, index) => {
+                        output += `${index + 1}. ${borrow.book.title} by ${borrow.book.author}\n`;
+                        output += `   User: ${borrow.user.name} (${borrow.user.email})\n`;
+                        output += `   Status: ${borrow.status}\n`;
+                        output += `   Borrowed: ${new Date(borrow.borrowed_at).toLocaleDateString()}\n`;
+                        if (borrow.returned_at) {
+                            output += `   Returned: ${new Date(borrow.returned_at).toLocaleDateString()}\n`;
+                        }
+                        output += `\n`;
+                    });
+                } else {
+                    output += `No borrow records found.\n`;
+                }
+                
+                showResult('all-borrows-result', output, 'success');
+            } else {
+                showResult('all-borrows-result', 
+                    `❌ FAILED!\n\n${result.error || JSON.stringify(result.data, null, 2)}`, 
+                    'error'
+                );
+            }
+        }
+
+        // Auto-load users and books on page load
+        window.onload = function() {
+            checkUsers();
+            checkBooks();
+        };
+    </script>
+</body>
+</html>

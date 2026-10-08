@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }
+        .form-group { margin: 15px 0; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+        button { background: #007cba; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #005a87; }
+        .result { margin: 20px 0; padding: 15px; border-radius: 4px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+    </style>
+</head>
+<body>
+    <h1>🔐 Laravel Login Test</h1>
+    
+    <div class="info">
+        <strong>Test this before using the React frontend!</strong><br>
+        This will help identify if the issue is with Laravel or the frontend.
+    </div>
+
+    <form id="loginForm" action="{{route()}} " method="POST">
+        <div class="form-group">
+            <label>Email:</label>
+            <input type="email" id="email" value="admin@library.com" required>
+        </div>
+        
+        <div class="form-group">
+            <label>Password:</label>
+            <input type="password" id="password" value="password" required>
+        </div>
+        
+        <button type="submit">Test Login</button>
+        <button type="button" onclick="checkUsers()">Check Users</button>
+        <button type="button" onclick="testAPI()">Test API</button>
+    </form>
+
+    <div id="result"></div>
+
+    <div class="info">
+        <h3>Common Test Credentials:</h3>
+        <ul>
+            <li><strong>Sabaf:</strong> admin@library.com / password</li>
+            <li><strong>Librarian:</strong> librarian@library.com / password</li>
+            <li><strong>User:</strong> alice@student.com / password</li>
+            <li><strong>Test:</strong> admin@test.com / password</li>
+        </ul>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000/api';
+        
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const resultDiv = document.getElementById('result');
+            
+            resultDiv.innerHTML = '<div class="info">Testing login...</div>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <h3>✅ Login Successful!</h3>
+                            <p><strong>User:</strong> ${data.user.name}</p>
+                            <p><strong>Email:</strong> ${data.user.email}</p>
+                            <p><strong>Role:</strong> ${data.user.role}</p>
+                            <p><strong>Token:</strong> ${data.token.substring(0, 20)}...</p>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            <h3>❌ Login Failed</h3>
+                            <p><strong>Status:</strong> ${response.status}</p>
+                            <p><strong>Error:</strong> ${JSON.stringify(data, null, 2)}</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h3>❌ Network Error</h3>
+                        <p>${error.message}</p>
+                        <p>Make sure Laravel server is running: <code>php artisan serve</code></p>
+                    </div>
+                `;
+            }
+        });
+        
+        async function checkUsers() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<div class="info">Checking users...</div>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/debug-users`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    let usersHtml = '<h4>Users in Database:</h4><ul>';
+                    data.users.forEach(user => {
+                        usersHtml += `<li>${user.email} (${user.role})</li>`;
+                    });
+                    usersHtml += '</ul>';
+                    
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <h3>✅ Database Check</h3>
+                            <p><strong>Total Users:</strong> ${data.total_users}</p>
+                            ${usersHtml}
+                            <p><strong>Admin Exists:</strong> ${data.admin_exists ? 'Yes' : 'No'}</p>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            <h3>❌ Database Error</h3>
+                            <p>${JSON.stringify(data, null, 2)}</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h3>❌ Network Error</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        async function testAPI() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<div class="info">Testing API...</div>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/test`);
+                const data = await response.json();
+                
+                resultDiv.innerHTML = `
+                    <div class="success">
+                        <h3>✅ API Working</h3>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    </div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h3>❌ API Not Working</h3>
+                        <p>${error.message}</p>
+                        <p>Start Laravel: <code>php artisan serve</code></p>
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

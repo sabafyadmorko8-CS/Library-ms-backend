@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Login Issue</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 20px auto; padding: 20px; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        button { padding: 10px 15px; margin: 5px; background: #007cba; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #005a87; }
+        .result { margin: 10px 0; padding: 10px; border-radius: 3px; white-space: pre-wrap; font-family: monospace; max-height: 400px; overflow-y: auto; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        input { padding: 8px; margin: 5px; border: 1px solid #ddd; border-radius: 3px; width: 200px; }
+        .big-button { padding: 15px 25px; font-size: 16px; font-weight: bold; background: #28a745; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Debug Login Issue</h1>
+    
+    <div class="section">
+        <h3>🚀 Step 1: Setup Everything</h3>
+        <button onclick="setupEverything()" class="big-button">SETUP EVERYTHING</button>
+        <div id="setup-result" class="result info">Click to create users and setup database</div>
+    </div>
+
+    <div class="section">
+        <h3>Step 2: Test API Endpoints</h3>
+        <button onclick="testEndpoints()">Test All Endpoints</button>
+        <div id="endpoints-result" class="result info">Test if API endpoints are working</div>
+    </div>
+
+    <div class="section">
+        <h3>Step 3: Test Login Methods</h3>
+        <div>
+            <label>Email: </label>
+            <input type="email" id="email" value="sabaf@admin.com">
+            <label>Password: </label>
+            <input type="password" id="password" value="password">
+        </div>
+        <button onclick="testMainLogin()">Test /login</button>
+        <button onclick="testSimpleLogin()">Test /simple-login</button>
+        <div id="login-result" class="result info">Test different login endpoints</div>
+    </div>
+
+    <div class="section">
+        <h3>Step 4: Check Users</h3>
+        <button onclick="checkUsers()">Check All Users</button>
+        <div id="users-result" class="result info">See what users exist in database</div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://127.0.0.1:8000/api';
+
+        function showResult(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.className = `result ${type}`;
+            element.textContent = message;
+        }
+
+        async function makeRequest(endpoint, options = {}) {
+            try {
+                console.log(`Making request to: ${API_BASE}${endpoint}`);
+                console.log('Options:', options);
+                
+                const response = await fetch(`${API_BASE}${endpoint}`, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        ...options.headers
+                    },
+                    ...options
+                });
+                
+                console.log('Response status:', response.status);
+                console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+                
+                const data = await response.json();
+                console.log('Response data:', data);
+                
+                return { success: response.ok, data, status: response.status, headers: response.headers };
+            } catch (error) {
+                console.error('Request error:', error);
+                return { success: false, error: error.message };
+            }
+        }
+
+        async function setupEverything() {
+            showResult('setup-result', '🔄 Setting up everything...', 'info');
+            
+            let results = 'COMPLETE SETUP:\n\n';
+            
+            // Step 1: Test basic API
+            results += '1. Testing basic API...\n';
+            const apiTest = await makeRequest('/test');
+            if (apiTest.success) {
+                results += '   ✅ API is working\n';
+            } else {
+                results += '   ❌ API failed\n';
+                showResult('setup-result', results + '\n❌ SETUP FAILED - API not working', 'error');
+                return;
+            }
+            
+            // Step 2: Create demo users
+            results += '2. Creating demo users...\n';
+            const demoResult = await makeRequest('/create-demo-users');
+            if (demoResult.success) {
+                results += '   ✅ Demo users created\n';
+            } else {
+                results += '   ❌ Demo users failed\n';
+            }
+            
+            // Step 3: Create Sabaf admin
+            results += '3. Creating Sabaf admin...\n';
+            const sabafResult = await makeRequest('/create-sabaf-admin');
+            if (sabafResult.success) {
+                results += '   ✅ Sabaf admin created\n';
+            } else {
+                results += '   ❌ Sabaf admin failed\n';
+            }
+            
+            // Step 4: Check final user count
+            results += '4. Checking users...\n';
+            const usersResult = await makeRequest('/debug-users');
+            if (usersResult.success) {
+                results += `   ✅ Total users: ${usersResult.data.total_users}\n`;
+            } else {
+                results += '   ❌ User check failed\n';
+            }
+            
+            results += '\n🎉 SETUP COMPLETE!\n';
+            results += 'Now test the login endpoints below.';
+            
+            showResult('setup-result', results, 'success');
+        }
+
+        async function testEndpoints() {
+            showResult('endpoints-result', '🔄 Testing endpoints...', 'info');
+            
+            const endpoints = [
+                { url: '/test', method: 'GET' },
+                { url: '/debug-users', method: 'GET' },
+                { url: '/login', method: 'GET' },
+                { url: '/simple-login', method: 'GET' }
+            ];
+            
+            let results = 'ENDPOINT TESTS:\n\n';
+            
+            for (const endpoint of endpoints) {
+                const result = await makeRequest(endpoint.url, { method: endpoint.method });
+                const status = result.success ? '✅' : '❌';
+                results += `${status} ${endpoint.method} ${endpoint.url} - Status: ${result.status || 'Failed'}\n`;
+                
+                if (!result.success && result.error) {
+                    results += `   Error: ${result.error}\n`;
+                }
+            }
+            
+            showResult('endpoints-result', results, 'info');
+        }
+
+        async function testMainLogin() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            showResult('login-result', '🔄 Testing /login endpoint...', 'info');
+            
+            const result = await makeRequest('/login', {
+                method: 'POST',
+                body: JSON.stringify({ email, password })
+            });
+            
+            let output = `MAIN LOGIN TEST (/login):\n\n`;
+            output += `Status: ${result.status}\n`;
+            output += `Success: ${result.success}\n`;
+            output += `Response: ${JSON.stringify(result.data, null, 2)}\n`;
+            
+            if (result.error) {
+                output += `Error: ${result.error}\n`;
+            }
+            
+            showResult('login-result', output, result.success ? 'success' : 'error');
+        }
+
+        async function testSimpleLogin() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            showResult('login-result', '🔄 Testing /simple-login endpoint...', 'info');
+            
+            const result = await makeRequest('/simple-login', {
+                method: 'POST',
+                body: JSON.stringify({ email, password })
+            });
+            
+            let output = `SIMPLE LOGIN TEST (/simple-login):\n\n`;
+            output += `Status: ${result.status}\n`;
+            output += `Success: ${result.success}\n`;
+            output += `Response: ${JSON.stringify(result.data, null, 2)}\n`;
+            
+            if (result.error) {
+                output += `Error: ${result.error}\n`;
+            }
+            
+            if (result.success && result.data.user) {
+                output += `\n✅ LOGIN SUCCESS!\n`;
+                output += `User ID: ${result.data.user.id}\n`;
+                output += `User Name: ${result.data.user.name}\n`;
+                output += `User Email: ${result.data.user.email}\n`;
+                output += `User Role: ${result.data.user.role}\n`;
+                output += `Token: ${result.data.token}\n`;
+            }
+            
+            showResult('login-result', output, result.success ? 'success' : 'error');
+        }
+
+        async function checkUsers() {
+            showResult('users-result', '🔄 Checking users...', 'info');
+            
+            const result = await makeRequest('/debug-users');
+            
+            if (result.success) {
+                let output = `✅ USERS IN DATABASE:\n\n`;
+                output += `Total Users: ${result.data.total_users}\n\n`;
+                
+                if (result.data.users && result.data.users.length > 0) {
+                    result.data.users.forEach((user, index) => {
+                        output += `${index + 1}. ${user.name}\n`;
+                        output += `   📧 ${user.email}\n`;
+                        output += `   👤 Role: ${user.role}\n`;
+                        output += `   🆔 ID: ${user.id}\n\n`;
+                    });
+                } else {
+                    output += `❌ No users found!\n`;
+                    output += `Run "SETUP EVERYTHING" first.`;
+                }
+                
+                showResult('users-result', output, 'success');
+            } else {
+                showResult('users-result', 
+                    `❌ FAILED to get users!\n\nError: ${result.error || JSON.stringify(result.data, null, 2)}`, 
+                    'error'
+                );
+            }
+        }
+
+        // Auto-setup on page load
+        window.onload = function() {
+            setupEverything();
+        };
+    </script>
+</body>
+</html>

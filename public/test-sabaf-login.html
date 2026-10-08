@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Sabaf Login</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 20px auto; padding: 20px; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        button { padding: 10px 15px; margin: 5px; background: #007cba; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #005a87; }
+        .result { margin: 10px 0; padding: 10px; border-radius: 3px; white-space: pre-wrap; font-family: monospace; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+    </style>
+</head>
+<body>
+    <h1>🔐 Test Sabaf Login</h1>
+    
+    <div class="section">
+        <h3>Step 1: Create Sabaf User</h3>
+        <button onclick="createSabafUser()">Create Sabaf Admin User</button>
+        <div id="create-result" class="result"></div>
+    </div>
+
+    <div class="section">
+        <h3>Step 2: Test Login</h3>
+        <button onclick="testSabafLogin()">Test Sabaf Login</button>
+        <div id="login-result" class="result"></div>
+    </div>
+
+    <div class="section">
+        <h3>Step 3: Check All Users</h3>
+        <button onclick="checkAllUsers()">Show All Users</button>
+        <div id="users-result" class="result"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://127.0.0.1:8000/api';
+
+        function showResult(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.className = `result ${type}`;
+            element.textContent = message;
+        }
+
+        async function makeRequest(endpoint, options = {}) {
+            try {
+                const response = await fetch(`${API_BASE}${endpoint}`, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        ...options.headers
+                    },
+                    ...options
+                });
+                
+                const data = await response.json();
+                return { success: response.ok, data, status: response.status };
+            } catch (error) {
+                return { success: false, error: error.message };
+            }
+        }
+
+        async function createSabafUser() {
+            showResult('create-result', 'Creating Sabaf user...', 'info');
+            
+            const result = await makeRequest('/create-sabaf-admin');
+            
+            if (result.success) {
+                showResult('create-result', 
+                    `✅ SUCCESS!\n\n${JSON.stringify(result.data, null, 2)}`, 
+                    'success'
+                );
+            } else {
+                showResult('create-result', 
+                    `❌ FAILED!\n\nError: ${result.error || JSON.stringify(result.data, null, 2)}`, 
+                    'error'
+                );
+            }
+        }
+
+        async function testSabafLogin() {
+            showResult('login-result', 'Testing Sabaf login...', 'info');
+            
+            const result = await makeRequest('/simple-login', {
+                method: 'POST',
+                body: JSON.stringify({
+                    email: 'sabaf@admin.com',
+                    password: 'password'
+                })
+            });
+            
+            if (result.success) {
+                showResult('login-result', 
+                    `✅ LOGIN SUCCESS!\n\n${JSON.stringify(result.data, null, 2)}`, 
+                    'success'
+                );
+            } else {
+                showResult('login-result', 
+                    `❌ LOGIN FAILED!\n\nError: ${result.error || JSON.stringify(result.data, null, 2)}`, 
+                    'error'
+                );
+            }
+        }
+
+        async function checkAllUsers() {
+            showResult('users-result', 'Checking all users...', 'info');
+            
+            const result = await makeRequest('/debug-users');
+            
+            if (result.success) {
+                let output = `✅ USERS FOUND!\n\n`;
+                output += `Total Users: ${result.data.total_users}\n\n`;
+                
+                if (result.data.users && result.data.users.length > 0) {
+                    output += `Users:\n`;
+                    result.data.users.forEach(user => {
+                        output += `- ${user.name} (${user.email}) - Role: ${user.role}\n`;
+                    });
+                } else {
+                    output += `No users found in database.\n`;
+                }
+                
+                showResult('users-result', output, 'success');
+            } else {
+                showResult('users-result', 
+                    `❌ FAILED TO GET USERS!\n\nError: ${result.error || JSON.stringify(result.data, null, 2)}`, 
+                    'error'
+                );
+            }
+        }
+
+        // Auto-check on page load
+        window.onload = function() {
+            showResult('create-result', 'Click "Create Sabaf Admin User" to create the user first.', 'info');
+            showResult('login-result', 'After creating user, click "Test Sabaf Login" to test.', 'info');
+            showResult('users-result', 'Click "Show All Users" to see all users in database.', 'info');
+        };
+    </script>
+</body>
+</html>

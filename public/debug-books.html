@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Book Creation</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 1000px; margin: 20px auto; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        button { padding: 10px 15px; margin: 5px; background: #007cba; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #005a87; }
+        .result { margin: 10px 0; padding: 10px; border-radius: 3px; white-space: pre-wrap; font-family: monospace; max-height: 400px; overflow-y: auto; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Debug Book Creation Issue</h1>
+    
+    <div class="test-section">
+        <h3>Step 1: Test Database & Table</h3>
+        <button onclick="testDatabase()">Test Books Table</button>
+        <div id="db-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Step 2: Test Book Creation (Debug Endpoint)</h3>
+        <button onclick="testDebugCreate()">Debug Create Book</button>
+        <div id="debug-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Step 3: Test Book Creation (Main Endpoint)</h3>
+        <button onclick="testMainCreate()">Main Create Book</button>
+        <div id="main-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Step 4: Test Different Data Types</h3>
+        <button onclick="testStringQuantity()">Test String Quantity</button>
+        <button onclick="testNumberQuantity()">Test Number Quantity</button>
+        <div id="type-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Step 5: List Current Books</h3>
+        <button onclick="listBooks()">List All Books</button>
+        <div id="list-result" class="result"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://127.0.0.1:8000/api';
+
+        function showResult(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.className = `result ${type}`;
+            element.textContent = message;
+        }
+
+        async function makeRequest(endpoint, options = {}) {
+            try {
+                const response = await fetch(`${API_BASE}${endpoint}`, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        ...options.headers
+                    },
+                    ...options
+                });
+                
+                const data = await response.json();
+                return { success: response.ok, data, status: response.status };
+            } catch (error) {
+                return { success: false, error: error.message };
+            }
+        }
+
+        async function testDatabase() {
+            const result = await makeRequest('/test-books-table');
+            if (result.success) {
+                showResult('db-result', `✅ Database Test Passed!\n${JSON.stringify(result.data, null, 2)}`, 'success');
+            } else {
+                showResult('db-result', `❌ Database Test Failed: ${result.error || JSON.stringify(result.data)}`, 'error');
+            }
+        }
+
+        async function testDebugCreate() {
+            const bookData = {
+                title: 'Debug Test Book',
+                author: 'Debug Author',
+                isbn: '978-0-000-00000-1',
+                quantity: 5
+            };
+
+            const result = await makeRequest('/debug-books', {
+                method: 'POST',
+                body: JSON.stringify(bookData)
+            });
+
+            if (result.success) {
+                showResult('debug-result', `✅ Debug Create Result:\n${JSON.stringify(result.data, null, 2)}`, 'success');
+            } else {
+                showResult('debug-result', `❌ Debug Create Failed: ${result.error || JSON.stringify(result.data)}`, 'error');
+            }
+        }
+
+        async function testMainCreate() {
+            const bookData = {
+                title: 'Main Test Book',
+                author: 'Main Author',
+                isbn: '978-0-000-00000-2',
+                quantity: 3
+            };
+
+            const result = await makeRequest('/books', {
+                method: 'POST',
+                body: JSON.stringify(bookData)
+            });
+
+            if (result.success) {
+                showResult('main-result', `✅ Main Create Success!\n${JSON.stringify(result.data, null, 2)}`, 'success');
+            } else {
+                showResult('main-result', `❌ Main Create Failed: ${result.error || JSON.stringify(result.data)}`, 'error');
+            }
+        }
+
+        async function testStringQuantity() {
+            const bookData = {
+                title: 'String Quantity Test',
+                author: 'Test Author',
+                isbn: '978-0-000-00000-3',
+                quantity: "5" // String instead of number
+            };
+
+            const result = await makeRequest('/debug-books', {
+                method: 'POST',
+                body: JSON.stringify(bookData)
+            });
+
+            showResult('type-result', `String Quantity Test:\n${JSON.stringify(result.data, null, 2)}`, result.success ? 'success' : 'error');
+        }
+
+        async function testNumberQuantity() {
+            const bookData = {
+                title: 'Number Quantity Test',
+                author: 'Test Author',
+                isbn: '978-0-000-00000-4',
+                quantity: 5 // Actual number
+            };
+
+            const result = await makeRequest('/debug-books', {
+                method: 'POST',
+                body: JSON.stringify(bookData)
+            });
+
+            showResult('type-result', `Number Quantity Test:\n${JSON.stringify(result.data, null, 2)}`, result.success ? 'success' : 'error');
+        }
+
+        async function listBooks() {
+            const result = await makeRequest('/books');
+            if (result.success) {
+                showResult('list-result', `✅ Current Books:\n${JSON.stringify(result.data, null, 2)}`, 'success');
+            } else {
+                showResult('list-result', `❌ Failed to list books: ${result.error || JSON.stringify(result.data)}`, 'error');
+            }
+        }
+
+        // Auto-run database test on page load
+        window.onload = function() {
+            testDatabase();
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test User Fix</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: 20px auto; padding: 20px; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        button { padding: 10px 15px; margin: 5px; background: #007cba; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #005a87; }
+        .result { margin: 10px 0; padding: 10px; border-radius: 3px; white-space: pre-wrap; font-family: monospace; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        input { padding: 8px; margin: 5px; border: 1px solid #ddd; border-radius: 3px; width: 200px; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test User Fix</h1>
+    
+    <div class="section">
+        <h3>Step 1: Create All Users</h3>
+        <button onclick="createAllUsers()">Create All Users</button>
+        <div id="create-result" class="result info">Click to create all necessary users</div>
+    </div>
+
+    <div class="section">
+        <h3>Step 2: Test User Borrows</h3>
+        <div>
+            <label>User ID: </label>
+            <input type="number" id="userId" value="1" min="1">
+            <button onclick="testUserBorrows()">Test User Borrows</button>
+        </div>
+        <div id="borrows-result" class="result info">Test if user borrows API works</div>
+    </div>
+
+    <div class="section">
+        <h3>Step 3: Test Login</h3>
+        <div>
+            <label>Email: </label>
+            <input type="email" id="email" value="sabaf@admin.com">
+            <label>Password: </label>
+            <input type="password" id="password" value="password">
+            <button onclick="testLogin()">Test Login</button>
+        </div>
+        <div id="login-result" class="result info">Test login functionality</div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://127.0.0.1:8000/api';
+
+        function showResult(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.className = `result ${type}`;
+            element.textContent = message;
+        }
+
+        async function makeRequest(endpoint, options = {}) {
+            try {
+                const response = await fetch(`${API_BASE}${endpoint}`, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        ...options.headers
+                    },
+                    ...options
+                });
+                
+                const data = await response.json();
+                return { success: response.ok, data, status: response.status };
+            } catch (error) {
+                return { success: false, error: error.message };
+            }
+        }
+
+        async function createAllUsers() {
+            showResult('create-result', '🔄 Creating all users...', 'info');
+            
+            let results = 'USER CREATION RESULTS:\n\n';
+            
+            // Create demo users
+            const demoResult = await makeRequest('/create-demo-users');
+            if (demoResult.success) {
+                results += '✅ Demo users created\n';
+                if (demoResult.data.users) {
+                    demoResult.data.users.forEach(user => {
+                        results += `   • ${user.name} (${user.email}) - ${user.role}\n`;
+                    });
+                }
+            } else {
+                results += '❌ Demo users failed\n';
+            }
+            
+            results += '\n';
+            
+            // Create Sabaf admin
+            const sabafResult = await makeRequest('/create-sabaf-admin');
+            if (sabafResult.success) {
+                results += '✅ Sabaf admin created\n';
+                results += `   • ${sabafResult.data.user.name} (${sabafResult.data.user.email}) - ${sabafResult.data.user.role}\n`;
+            } else {
+                results += '❌ Sabaf admin failed\n';
+            }
+            
+            results += '\n✅ All users created! You can now test the other functions.';
+            
+            showResult('create-result', results, 'success');
+        }
+
+        async function testUserBorrows() {
+            const userId = document.getElementById('userId').value;
+            showResult('borrows-result', `🔄 Testing borrows for user ${userId}...`, 'info');
+            
+            const result = await makeRequest(`/my-borrows?user_id=${userId}`);
+            
+            if (result.success) {
+                let output = `✅ USER BORROWS SUCCESS!\n\n`;
+                output += `User: ${result.data.user.name} (${result.data.user.email})\n`;
+                output += `Total Borrows: ${result.data.total_borrows}\n`;
+                output += `Active Borrows: ${result.data.active_borrows}\n`;
+                output += `Returned Borrows: ${result.data.returned_borrows}\n\n`;
+                
+                if (result.data.borrows && result.data.borrows.length > 0) {
+                    output += `BORROWED BOOKS:\n`;
+                    result.data.borrows.forEach((borrow, index) => {
+                        output += `${index + 1}. ${borrow.book.title} - ${borrow.status}\n`;
+                    });
+                } else {
+                    output += `No books borrowed by this user.`;
+                }
+                
+                showResult('borrows-result', output, 'success');
+            } else {
+                showResult('borrows-result', 
+                    `❌ BORROWS TEST FAILED!\n\n${result.error || JSON.stringify(result.data, null, 2)}`, 
+                    'error'
+                );
+            }
+        }
+
+        async function testLogin() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            showResult('login-result', '🔄 Testing login...', 'info');
+            
+            const result = await makeRequest('/simple-login', {
+                method: 'POST',
+                body: JSON.stringify({ email, password })
+            });
+            
+            if (result.success) {
+                let output = `✅ LOGIN SUCCESS!\n\n`;
+                output += `User: ${result.data.user.name}\n`;
+                output += `Email: ${result.data.user.email}\n`;
+                output += `Role: ${result.data.user.role}\n`;
+                output += `ID: ${result.data.user.id}\n`;
+                output += `Token: ${result.data.token}\n\n`;
+                output += `🎉 Login is working perfectly!`;
+                
+                showResult('login-result', output, 'success');
+            } else {
+                showResult('login-result', 
+                    `❌ LOGIN FAILED!\n\n${result.error || JSON.stringify(result.data, null, 2)}`, 
+                    'error'
+                );
+            }
+        }
+
+        // Auto-create users on page load
+        window.onload = function() {
+            createAllUsers();
+        };
+    </script>
+</body>
+</html>

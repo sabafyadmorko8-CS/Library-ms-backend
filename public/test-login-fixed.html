@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Test - Fixed</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        button { padding: 10px 15px; margin: 5px; background: #007cba; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #005a87; }
+        .result { margin-top: 10px; padding: 10px; background: #f5f5f5; border-radius: 3px; white-space: pre-wrap; }
+        .error { background: #ffe6e6; color: #d00; }
+        .success { background: #e6ffe6; color: #080; }
+        input { padding: 8px; margin: 5px; border: 1px solid #ddd; border-radius: 3px; width: 200px; }
+        .form-group { margin: 10px 0; }
+        label { display: inline-block; width: 80px; }
+    </style>
+</head>
+<body>
+    <h1>🔐 Login Test - CORS Fixed</h1>
+    <p>This tests the fixed login endpoint with proper headers</p>
+
+    <div class="section">
+        <h3>Quick Test - Sabaf Login</h3>
+        <button onclick="testWorkingAdmin()">Test Sabaf Login</button>
+        <div id="quick-result" class="result"></div>
+    </div>
+
+    <div class="section">
+        <h3>Custom Login Test</h3>
+        <div class="form-group">
+            <label>Email:</label>
+            <input type="email" id="email" value="sabaf@admin.com" />
+        </div>
+        <div class="form-group">
+            <label>Password:</label>
+            <input type="password" id="password" value="password" />
+        </div>
+        <button onclick="testLogin()">Test Login</button>
+        <div id="login-result" class="result"></div>
+    </div>
+
+    <div class="section">
+        <h3>API Connectivity</h3>
+        <button onclick="testAPI()">Test API Connection</button>
+        <div id="api-result" class="result"></div>
+    </div>
+
+    <div class="section">
+        <h3>Demo Users</h3>
+        <button onclick="createDemoUsers()">Create Demo Users</button>
+        <button onclick="listUsers()">List All Users</button>
+        <div id="demo-result" class="result"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://127.0.0.1:8000/api';
+
+        async function makeRequest(endpoint, options = {}) {
+            try {
+                const response = await fetch(`${API_BASE}${endpoint}`, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        ...options.headers
+                    },
+                    ...options
+                });
+                
+                const data = await response.json();
+                return { success: response.ok, data, status: response.status };
+            } catch (error) {
+                return { success: false, error: error.message };
+            }
+        }
+
+        function displayResult(elementId, result) {
+            const element = document.getElementById(elementId);
+            if (result.success) {
+                element.className = 'result success';
+                element.textContent = JSON.stringify(result.data, null, 2);
+            } else {
+                element.className = 'result error';
+                element.textContent = result.error || JSON.stringify(result.data, null, 2);
+            }
+        }
+
+        async function testWorkingAdmin() {
+            const result = await makeRequest('/login', {
+                method: 'POST',
+                body: JSON.stringify({
+                    email: 'sabaf@admin.com',
+                    password: 'password'
+                })
+            });
+            displayResult('quick-result', result);
+        }
+
+        async function testLogin() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            const result = await makeRequest('/login', {
+                method: 'POST',
+                body: JSON.stringify({ email, password })
+            });
+            displayResult('login-result', result);
+        }
+
+        async function testAPI() {
+            const result = await makeRequest('/test');
+            displayResult('api-result', result);
+        }
+
+        async function createDemoUsers() {
+            const result = await makeRequest('/create-demo-users');
+            displayResult('demo-result', result);
+        }
+
+        async function listUsers() {
+            const result = await makeRequest('/users');
+            displayResult('demo-result', result);
+        }
+
+        // Auto-test on page load
+        window.onload = function() {
+            testAPI();
+        };
+    </script>
+</body>
+</html>
